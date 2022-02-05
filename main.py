@@ -3,7 +3,7 @@ import sys
 import requests
 from PyQt5 import uic
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
 from settings import *
 
 SCREEN_SIZE = [600, 450]
@@ -27,6 +27,7 @@ class Map(QMainWindow):
         self.getImage()
 
     def getImage(self):
+        """Функция получения изображения по параметрам"""
         parameters = {'spn': f'{self.spn},{self.spn}',
                       'll': ','.join(map(str, self.ll)), 'l': self.map_type,
                       'size': ','.join(map(str, self.map_size)),
@@ -34,11 +35,10 @@ class Map(QMainWindow):
         response = requests.get(static_api_server, params=parameters)
 
         if not response:
-            print("Ошибка выполнения запроса:")
-            print("Http статус:", response.status_code, "(", response.reason, ")")
-            sys.exit(1)
+            QMessageBox.critical(self, 'Ошибка',
+                                 f'Ошибка выполнения запроcа:\nHttp статус: '
+                                 f'{response.status_code} ({response.reason})')
 
-        # Запишем полученное изображение в файл.
         self.map_file = "map.png"
         with open(self.map_file, "wb") as file:
             file.write(response.content)
