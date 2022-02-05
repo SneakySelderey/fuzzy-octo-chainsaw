@@ -4,6 +4,7 @@ import requests
 from PyQt5 import uic
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtCore import Qt
 
 SCREEN_SIZE = [600, 450]
 
@@ -20,10 +21,12 @@ class Map(QMainWindow):
         self.map_file = None
         self.spn = self.z = self.ll = 0
         self.map_type = 'map'
+        self.coords = '37.530887,55.703118'
+        self.spn = '0.002,0.002'
         self.getImage()
 
     def getImage(self):
-        map_request = "http://static-maps.yandex.ru/1.x/?ll=37.530887,55.703118&spn=0.002,0.002&l=map"
+        map_request = f"http://static-maps.yandex.ru/1.x/?ll={self.coords}&spn={self.spn}&l=map"
         response = requests.get(map_request)
 
         if not response:
@@ -42,6 +45,28 @@ class Map(QMainWindow):
     def closeEvent(self, event):
         """При закрытии формы подчищаем за собой"""
         os.remove(self.map_file)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_S or event.key() == Qt.Key_Down:
+            coords = list(map(float, self.coords.split(',')))
+            coords[1] = coords[1] - list(map(float, self.spn.split(',')))[1]
+            self.coords = ','.join(list(map(str, coords)))
+
+        if event.key() == Qt.Key_W or event.key() == Qt.Key_Up:
+            coords = list(map(float, self.coords.split(',')))
+            coords[1] = coords[1] + list(map(float, self.spn.split(',')))[1]
+            self.coords = ','.join(list(map(str, coords)))
+
+        if event.key() == Qt.Key_A or event.key() == Qt.Key_Left:
+            coords = list(map(float, self.coords.split(',')))
+            coords[0] = coords[0] - list(map(float, self.spn.split(',')))[0]
+            self.coords = ','.join(list(map(str, coords)))
+
+        if event.key() == Qt.Key_D or event.key() == Qt.Key_Right:
+            coords = list(map(float, self.coords.split(',')))
+            coords[0] = coords[0] + list(map(float, self.spn.split(',')))[0]
+            self.coords = ','.join(list(map(str, coords)))
+        self.getImage()
 
 
 if __name__ == '__main__':
