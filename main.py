@@ -127,8 +127,6 @@ class Map(QMainWindow):
                 parameters['ll'] = ','.join(map(str, self.ll))
                 response = requests.get(static_api_server, params=parameters)
 
-        print(self.spn)
-
         self.map_file = "map.png"
         with open(self.map_file, "wb") as file:
             file.write(response.content)
