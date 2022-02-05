@@ -4,9 +4,8 @@ import requests
 from PyQt5 import uic
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PyQt5.QtCore import Qt
 from settings import *
-
-SCREEN_SIZE = [600, 450]
 
 
 def except_hook(cls, exception, traceback):
@@ -21,17 +20,24 @@ class Map(QMainWindow):
         self.map_file = None
         self.map_size = 650, 450
         self.spn = 0.002
-        self.ll = 37.530887, 55.703118
         self.z = 15
+        self.ll = 37.530887, 55.703118
         self.map_type = 'map'
+        self.getImage()
+
+    def keyPressEvent(self, event):
+        """Обрабокта нажатий клавиш клавиатуры"""
+        if event.key() == Qt.Key_W:
+            self.z = min(20, self.z + 1)
+        elif event.key() == Qt.Key_S:
+            self.z = max(0, self.z - 1)
         self.getImage()
 
     def getImage(self):
         """Функция получения изображения по параметрам"""
-        parameters = {'spn': f'{self.spn},{self.spn}',
+        parameters = {
                       'll': ','.join(map(str, self.ll)), 'l': self.map_type,
-                      'size': ','.join(map(str, self.map_size)),
-                      'z': self.z}
+                      'size': ','.join(map(str, self.map_size)), 'z': self.z}
         response = requests.get(static_api_server, params=parameters)
 
         if not response:
