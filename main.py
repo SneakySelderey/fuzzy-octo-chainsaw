@@ -21,12 +21,11 @@ class Map(QMainWindow):
         self.map_file = None
         self.spn = self.z = self.ll = 0
         self.map_type = 'map'
-        self.coords = '37.530887,55.703118'
-        self.spn = '0.002,0.002'
+        self.bbox = '36.6,54.6~38.6,56.6'
         self.getImage()
 
     def getImage(self):
-        map_request = f"http://static-maps.yandex.ru/1.x/?ll={self.coords}&spn={self.spn}&l=map"
+        map_request = f"http://static-maps.yandex.ru/1.x/?&bbox={self.bbox}&l=map"
         response = requests.get(map_request)
 
         if not response:
@@ -47,25 +46,31 @@ class Map(QMainWindow):
         os.remove(self.map_file)
 
     def keyPressEvent(self, event):
+        left_down = self.bbox.split('~')[0]
+        up_right = self.bbox.split('~')[1]
         if event.key() == Qt.Key_S or event.key() == Qt.Key_Down:
-            coords = list(map(float, self.coords.split(',')))
-            coords[1] = coords[1] - list(map(float, self.spn.split(',')))[1]
-            self.coords = ','.join(list(map(str, coords)))
+            size_y = float(up_right.split(',')[1]) - float(left_down.split(',')[1])
+            new_y = float(left_down.split(',')[1]) - size_y, float(up_right.split(',')[1]) - size_y
+            self.bbox = f"{self.bbox.split('~')[0].split(',')[0]},{new_y[0]}~" \
+                        f"{self.bbox.split('~')[1].split(',')[0]},{new_y[1]}"
 
         if event.key() == Qt.Key_W or event.key() == Qt.Key_Up:
-            coords = list(map(float, self.coords.split(',')))
-            coords[1] = coords[1] + list(map(float, self.spn.split(',')))[1]
-            self.coords = ','.join(list(map(str, coords)))
+            size_y = float(up_right.split(',')[1]) - float(left_down.split(',')[1])
+            new_y = float(left_down.split(',')[1]) + size_y, float(up_right.split(',')[1]) + size_y
+            self.bbox = f"{self.bbox.split('~')[0].split(',')[0]},{new_y[0]}~" \
+                        f"{self.bbox.split('~')[1].split(',')[0]},{new_y[1]}"
 
         if event.key() == Qt.Key_A or event.key() == Qt.Key_Left:
-            coords = list(map(float, self.coords.split(',')))
-            coords[0] = coords[0] - list(map(float, self.spn.split(',')))[0]
-            self.coords = ','.join(list(map(str, coords)))
+            size_x = float(up_right.split(',')[0]) - float(left_down.split(',')[0])
+            new_x = float(left_down.split(',')[0]) - size_x, float(up_right.split(',')[0]) - size_x
+            self.bbox = f"{new_x[0]},{self.bbox.split('~')[0].split(',')[1]}~" \
+                        f"{new_x[1]},{self.bbox.split('~')[1].split(',')[1]}"
 
         if event.key() == Qt.Key_D or event.key() == Qt.Key_Right:
-            coords = list(map(float, self.coords.split(',')))
-            coords[0] = coords[0] + list(map(float, self.spn.split(',')))[0]
-            self.coords = ','.join(list(map(str, coords)))
+            size_x = float(up_right.split(',')[0]) - float(left_down.split(',')[0])
+            new_x = float(left_down.split(',')[0]) + size_x, float(up_right.split(',')[0]) + size_x
+            self.bbox = f"{new_x[0]},{self.bbox.split('~')[0].split(',')[1]}~" \
+                        f"{new_x[1]},{self.bbox.split('~')[1].split(',')[1]}"
         self.getImage()
 
 
