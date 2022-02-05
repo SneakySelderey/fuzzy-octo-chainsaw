@@ -27,9 +27,9 @@ class Map(QMainWindow):
 
     def keyPressEvent(self, event):
         """Обрабокта нажатий клавиш клавиатуры"""
-        if event.key() == Qt.Key_W:
+        if event.key() == Qt.Key_PageUp:
             self.z = min(20, self.z + 1)
-        elif event.key() == Qt.Key_S:
+        elif event.key() == Qt.Key_PageDown:
             self.z = max(0, self.z - 1)
         self.getImage()
 
