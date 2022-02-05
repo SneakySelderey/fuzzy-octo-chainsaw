@@ -23,7 +23,7 @@ class Map(QMainWindow):
         self.map_type = 'map'
         self.coords = '37.530887,55.703118'
         self.prev_coords = self.coords
-        self.spn = '5,5'
+        self.spn = '0.002,0.002'
         self.getImage()
 
     def getImage(self):
