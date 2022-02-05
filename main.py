@@ -3,7 +3,7 @@ import sys
 import requests
 from PyQt5 import uic
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow
 
 SCREEN_SIZE = [600, 450]
 
@@ -12,7 +12,7 @@ def except_hook(cls, exception, traceback):
     sys.__excepthook__(cls, exception, traceback)
 
 
-class Example(QMainWindow):
+class Map(QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi('system_files/main.ui', self)
@@ -46,7 +46,7 @@ class Example(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ex = Example()
+    ex = Map()
     ex.show()
     sys.excepthook = except_hook
     sys.exit(app.exec())
