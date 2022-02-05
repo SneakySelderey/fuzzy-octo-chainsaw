@@ -2,8 +2,8 @@ import os
 import sys
 import requests
 from PyQt5 import uic
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QHBoxLayout
+from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt5.QtCore import Qt
 from settings import *
 
@@ -17,6 +17,7 @@ class Map(QMainWindow):
         super().__init__()
         uic.loadUi('system_files/main.ui', self)
         self.setWindowTitle('Отображение карты')
+        self.setWindowIcon(QIcon('system_files/icon.png'))
         self.map_file = None
         self.map_size = 650, 450
         self.spn = 0.002
