@@ -17,19 +17,17 @@ class Map(QMainWindow):
         super().__init__()
         uic.loadUi('system_files/main.ui', self)
         self.setWindowTitle('Отображение карты')
+        self.setFixedSize(self.size())
         self.setWindowIcon(QIcon('system_files/icon.png'))
         self.map_file = None
         self.map_size = 650, 450
-        self.spn = 0.002
-        self.z = 15
-        self.ll = 37.530887, 55.703118
+        self.spn = 0.001
+        self.ll = [37.530887, 55.703118]
         self.radio = [self.l_map, self.sat_map, self.hybrid_map]
         [i.clicked.connect(self.changeMap) for i in self.radio]
         self.l_map.setChecked(True)
         self.map_type = 'map'
-        self.coords = '37.530887,55.703118'
-        self.prev_coords = self.coords
-        self.spn = '0.002,0.002'
+        self.prev_coords = [self.ll[0], self.ll[1]]
         self.getImage()
 
     def changeMap(self):
@@ -40,33 +38,26 @@ class Map(QMainWindow):
             parent == self.sat_map else 'sat,skl'
         self.getImage() if old_map != self.map_type else None
 
-    def keyPressEvent(self, event):
-        """Обрабокта нажатий клавиш клавиатуры"""
-        if event.key() == Qt.Key_PageUp:
-            self.z = min(19, self.z + 1)
-        elif event.key() == Qt.Key_PageDown:
-            self.z = max(0, self.z - 1)
-        self.getImage()
-
     def getImage(self):
         """Функция получения изображения по параметрам"""
         parameters = {'ll': ','.join(map(str, self.ll)), 'l': self.map_type,
-                      'size': ','.join(map(str, self.map_size)), 'z': self.z}
+                      'size': ','.join(map(str, self.map_size)),
+                      'spn': f'{self.spn},{self.spn}'}
         response = requests.get(static_api_server, params=parameters)
 
         if not response:
-            if float(self.coords.split(',')[0]) > 179.9999:
-                self.coords = f"-179.9999,{self.coords.split(',')[1]}"
-                map_request = f"http://static-maps.yandex.ru/1.x/?ll={self.coords}&spn={self.spn}&l=map"
-                response = requests.get(map_request)
-            elif float(self.coords.split(',')[0]) < -179.9999:
-                self.coords = f"179.9999,{self.coords.split(',')[1]}"
-                map_request = f"http://static-maps.yandex.ru/1.x/?ll={self.coords}&spn={self.spn}&l=map"
-                response = requests.get(map_request)
+            if self.ll[0] > 179.9999:
+                self.ll[0] = -179.9999 + self.spn * 3.49
+                parameters['ll'] = ','.join(map(str, self.ll))
+                response = requests.get(static_api_server, params=parameters)
+            elif self.ll[0] < -179.9999:
+                self.ll[0] = 179.9999 - self.spn * 3.49
+                parameters['ll'] = ','.join(map(str, self.ll))
+                response = requests.get(static_api_server, params=parameters)
             else:
-                self.coords = self.prev_coords
-                map_request = f"http://static-maps.yandex.ru/1.x/?ll={self.coords}&spn={self.spn}&l=map"
-                response = requests.get(map_request)
+                self.ll = [self.prev_coords[0], self.prev_coords[1]]
+                parameters['ll'] = ','.join(map(str, self.ll))
+                response = requests.get(static_api_server, params=parameters)
 
         self.map_file = "map.png"
         with open(self.map_file, "wb") as file:
@@ -79,26 +70,20 @@ class Map(QMainWindow):
         os.remove(self.map_file)
 
     def keyPressEvent(self, event):
-        self.prev_coords = self.coords
+        """Обрабокта нажатий клавиш клавиатуры"""
+        self.prev_coords = [self.ll[0], self.ll[1]]
+        if event.key() == Qt.Key_PageUp:
+            self.spn = max(self.spn / 2, 0.001)
+        if event.key() == Qt.Key_PageDown:
+            self.spn = min(self.spn * 2, 32.768)
         if event.key() == Qt.Key_S or event.key() == Qt.Key_Down:
-            coords = list(map(float, self.coords.split(',')))
-            coords[1] = coords[1] - (list(map(float, self.spn.split(',')))[1] * 1.4)
-            self.coords = ','.join(list(map(str, coords)))
-
+            self.ll[1] -= self.spn * 1.43
         if event.key() == Qt.Key_W or event.key() == Qt.Key_Up:
-            coords = list(map(float, self.coords.split(',')))
-            coords[1] = coords[1] + (list(map(float, self.spn.split(',')))[1] * 1.4)
-            self.coords = ','.join(list(map(str, coords)))
-
+            self.ll[1] += self.spn * 1.43
         if event.key() == Qt.Key_A or event.key() == Qt.Key_Left:
-            coords = list(map(float, self.coords.split(',')))
-            coords[0] = coords[0] - (list(map(float, self.spn.split(',')))[0] * 3.2)
-            self.coords = ','.join(list(map(str, coords)))
-
+            self.ll[0] -= self.spn * 3.49
         if event.key() == Qt.Key_D or event.key() == Qt.Key_Right:
-            coords = list(map(float, self.coords.split(',')))
-            coords[0] = coords[0] + (list(map(float, self.spn.split(',')))[0] * 3.2)
-            self.coords = ','.join(list(map(str, coords)))
+            self.ll[0] += self.spn * 3.49
         self.getImage()
 
 
