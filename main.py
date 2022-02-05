@@ -22,13 +22,48 @@ class Map(QMainWindow):
         self.map_file = None
         self.map_size = 650, 450
         self.spn = 0.001
-        self.ll = [37.530887, 55.703118]
+        self.ll = [9.794475, 50.972254]
         self.radio = [self.l_map, self.sat_map, self.hybrid_map]
         [i.clicked.connect(self.changeMap) for i in self.radio]
         self.l_map.setChecked(True)
         self.map_type = 'map'
         self.prev_coords = [self.ll[0], self.ll[1]]
+        self.moving = False
+        self.x = self.width() // 2
+        self.y = self.height() // 2
+        self.dif_x = self.dif_y = 0
         self.getImage()
+
+    def wheelEvent(self, event):
+        """Масштабирование"""
+        if event.angleDelta().y() > 0:
+            self.spn = max(self.spn / 2, 0.001)
+        else:
+            self.spn = min(self.spn * 2, 32.768)
+        self.getImage()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.moving = True
+            self.dif_x = self.x - event.x()
+            self.dif_y = self.y - event.y()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.moving = False
+            self.dif_y = self.dif_x = 0
+            self.x = self.width() // 2
+            self.y = self.height() // 2
+
+    def mouseMoveEvent(self, event):
+        """Обработка перемещения карыт с зажатой кнопкой мыши"""
+        if self.moving:
+            x1, y1 = event.x(), event.y()
+            self.x = x1 + self.dif_x
+            self.y = y1 + self.dif_y
+            self.ll[0] -= (self.x - self.width() // 2) * self.spn / 1150
+            self.ll[1] += (self.y - self.height() // 2) * self.spn / 1150
+            self.getImage()
 
     def changeMap(self):
         """Изменение типа карты"""
@@ -47,11 +82,15 @@ class Map(QMainWindow):
 
         if not response:
             if self.ll[0] > 179.9999:
-                self.ll[0] = -179.9999 + self.spn * 3.49
+                self.ll[0] = -179.9999
+                if not self.moving:
+                    self.ll[0] += self.spn * 3.49
                 parameters['ll'] = ','.join(map(str, self.ll))
                 response = requests.get(static_api_server, params=parameters)
             elif self.ll[0] < -179.9999:
-                self.ll[0] = 179.9999 - self.spn * 3.49
+                self.ll[0] = 179.9999
+                if not self.moving:
+                    self.ll[0] -= self.spn * 3.49
                 parameters['ll'] = ','.join(map(str, self.ll))
                 response = requests.get(static_api_server, params=parameters)
             else:
