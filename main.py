@@ -22,7 +22,8 @@ class Map(QMainWindow):
         self.spn = self.z = self.ll = 0
         self.map_type = 'map'
         self.coords = '37.530887,55.703118'
-        self.spn = '0.002,0.002'
+        self.prev_coords = self.coords
+        self.spn = '5,5'
         self.getImage()
 
     def getImage(self):
@@ -30,10 +31,18 @@ class Map(QMainWindow):
         response = requests.get(map_request)
 
         if not response:
-            print("Ошибка выполнения запроса:")
-            print(map_request)
-            print("Http статус:", response.status_code, "(", response.reason, ")")
-            sys.exit(1)
+            if float(self.coords.split(',')[0]) > 179.9999:
+                self.coords = f"-179.9999,{self.coords.split(',')[1]}"
+                map_request = f"http://static-maps.yandex.ru/1.x/?ll={self.coords}&spn={self.spn}&l=map"
+                response = requests.get(map_request)
+            elif float(self.coords.split(',')[0]) < -179.9999:
+                self.coords = f"179.9999,{self.coords.split(',')[1]}"
+                map_request = f"http://static-maps.yandex.ru/1.x/?ll={self.coords}&spn={self.spn}&l=map"
+                response = requests.get(map_request)
+            else:
+                self.coords = self.prev_coords
+                map_request = f"http://static-maps.yandex.ru/1.x/?ll={self.coords}&spn={self.spn}&l=map"
+                response = requests.get(map_request)
 
         # Запишем полученное изображение в файл.
         self.map_file = "map.png"
@@ -47,6 +56,7 @@ class Map(QMainWindow):
         os.remove(self.map_file)
 
     def keyPressEvent(self, event):
+        self.prev_coords = self.coords
         if event.key() == Qt.Key_S or event.key() == Qt.Key_Down:
             coords = list(map(float, self.coords.split(',')))
             coords[1] = coords[1] - (list(map(float, self.spn.split(',')))[1] * 1.4)
