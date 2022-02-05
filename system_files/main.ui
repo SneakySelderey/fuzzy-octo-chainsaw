@@ -19,8 +19,8 @@
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>221</width>
-      <height>21</height>
+      <width>641</width>
+      <height>25</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="choice_map">
@@ -42,6 +42,26 @@
       <widget class="QRadioButton" name="hybrid_map">
        <property name="text">
         <string>Гибрид</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="address"/>
+     </item>
+     <item>
+      <widget class="QPushButton" name="find_btn">
+       <property name="text">
+        <string>Найти</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="delete_req">
+       <property name="text">
+        <string>Сбросить</string>
+       </property>
+       <property name="shortcut">
+        <string>Del</string>
        </property>
       </widget>
      </item>

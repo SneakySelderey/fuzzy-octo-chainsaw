@@ -5,6 +5,7 @@ from PyQt5 import uic
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt5.QtCore import Qt
+from system_files.geocoder import *
 from settings import *
 
 
@@ -26,13 +27,41 @@ class Map(QMainWindow):
         self.radio = [self.l_map, self.sat_map, self.hybrid_map]
         [i.clicked.connect(self.changeMap) for i in self.radio]
         self.l_map.setChecked(True)
+        self.address.editingFinished.connect(self.getAddress)
+        self.delete_req.clicked.connect(self.deletePt)
+        self.find_btn.clicked.connect(self.getAddress)
         self.map_type = 'map'
         self.prev_coords = [self.ll[0], self.ll[1]]
         self.moving = False
         self.x = self.width() // 2
         self.y = self.height() // 2
         self.dif_x = self.dif_y = 0
+        self.pt = None
         self.getImage()
+
+    def deletePt(self):
+        self.pt = None
+        self.getImage()
+
+    def setDefault(self):
+        """Функция, устанавливающая некоторые значения по умолчанию"""
+        self.x = self.width() // 2
+        self.y = self.height() // 2
+        self.dif_x = self.dif_y = 0
+        self.moving = False
+
+    def getAddress(self):
+        """Функция обработки введенного адрсеа"""
+        if self.address.text():
+            value = get_address_pos(self.address.text())
+            if value is not None:
+                self.setDefault()
+                self.ll = get_address_pos(self.address.text())
+                self.pt = [self.ll[0], self.ll[1]]
+                self.getImage()
+            else:
+                QMessageBox.critical(self, 'Ошибка запроса',
+                                     'Адрес введен неверно')
 
     def wheelEvent(self, event):
         """Масштабирование"""
@@ -50,14 +79,12 @@ class Map(QMainWindow):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self.moving = False
-            self.dif_y = self.dif_x = 0
-            self.x = self.width() // 2
-            self.y = self.height() // 2
+            self.setDefault()
 
     def mouseMoveEvent(self, event):
         """Обработка перемещения карыт с зажатой кнопкой мыши"""
         if self.moving:
+            self.prev_coords = [self.ll[0], self.ll[1]]
             x1, y1 = event.x(), event.y()
             self.x = x1 + self.dif_x
             self.y = y1 + self.dif_y
@@ -78,6 +105,8 @@ class Map(QMainWindow):
         parameters = {'ll': ','.join(map(str, self.ll)), 'l': self.map_type,
                       'size': ','.join(map(str, self.map_size)),
                       'spn': f'{self.spn},{self.spn}'}
+        if self.pt is not None:
+            parameters['pt'] = ','.join(map(str, self.pt)) + ',ya_ru'
         response = requests.get(static_api_server, params=parameters)
 
         if not response:
@@ -97,6 +126,8 @@ class Map(QMainWindow):
                 self.ll = [self.prev_coords[0], self.prev_coords[1]]
                 parameters['ll'] = ','.join(map(str, self.ll))
                 response = requests.get(static_api_server, params=parameters)
+
+        print(self.spn)
 
         self.map_file = "map.png"
         with open(self.map_file, "wb") as file:
