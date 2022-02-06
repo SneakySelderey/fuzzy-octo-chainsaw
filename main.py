@@ -31,7 +31,7 @@ class Map(QMainWindow):
         self.delete_req.clicked.connect(self.deletePt)
         self.delete_req.clicked.connect(self.clear_address_line)
         self.find_btn.clicked.connect(self.getAddress)
-        self.show_post_index.stateChanged.connect(self.getAddress)
+        self.show_post_index.stateChanged.connect(self.index_show)
         self.map_type = 'map'
         self.prev_coords = [self.ll[0], self.ll[1]]
         self.moving = False
@@ -90,6 +90,42 @@ class Map(QMainWindow):
             self.moving = True
             self.dif_x = self.x - event.x()
             self.dif_y = self.y - event.y()
+
+            one_pix_to_degree_x = self.spn / self.width()
+            one_pix_to_degree_y = self.spn / self.height()
+
+            fake_ll = self.ll[0] - (self.dif_x * one_pix_to_degree_x) * 3.5, self.ll[1] + (self.dif_y *
+                                                                                           one_pix_to_degree_y) * 1.2
+            self.pt = [fake_ll[0], fake_ll[1]]
+
+            self.setDefault()
+            self.address_line.setPlainText(get_full_address(f"{self.pt[0]},{self.pt[1]}"))
+            if self.show_post_index.isChecked():
+                try:
+                    self.address_line.setPlainText(f"{self.address_line.toPlainText()},"
+                                                   f"{get_post_index(str(self.pt[0]) + ', ' + str(self.pt[1]))}")
+                except KeyError:
+                    QMessageBox.critical(self, 'Ошибка запроса',
+                                               'Почтовый индекс отсутствует')
+            self.getImage()
+        else:
+            QMessageBox.critical(self, 'Ошибка запроса',
+                                 'Адрес введен неверно')
+
+    def index_show(self):
+        if self.show_post_index.isChecked():
+            try:
+                self.address_line.setPlainText(f"{self.address_line.toPlainText()},"
+                                               f"{get_post_index(str(self.pt[0]) + ',' + str(self.pt[1]))}")
+            except KeyError:
+                QMessageBox.critical(self, 'Ошибка запроса',
+                                     'Почтовый индекс отсутствует')
+        else:
+            if self.address.text():
+                self.address_line.setPlainText(get_full_address(self.address.text()))
+            else:
+                self.address_line.setPlainText(get_full_address(f"{self.pt[0]}, {self.pt[1]}"))
+
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
