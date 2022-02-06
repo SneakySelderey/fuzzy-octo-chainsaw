@@ -31,6 +31,7 @@ class Map(QMainWindow):
         self.delete_req.clicked.connect(self.deletePt)
         self.delete_req.clicked.connect(self.clear_address_line)
         self.find_btn.clicked.connect(self.getAddress)
+        self.show_post_index.stateChanged.connect(self.getAddress)
         self.map_type = 'map'
         self.prev_coords = [self.ll[0], self.ll[1]]
         self.moving = False
@@ -64,6 +65,13 @@ class Map(QMainWindow):
                 self.ll = get_address_pos(self.address.text())
                 self.pt = [self.ll[0], self.ll[1]]
                 self.address_line.setPlainText(get_full_address(self.address.text()))
+                if self.show_post_index.isChecked():
+                    try:
+                        self.address_line.appendPlainText(f"{self.address_line.toPlainText()}, "
+                                                          f"{get_post_index(self.address.text())}")
+                    except KeyError:
+                        QMessageBox.critical(self, 'Ошибка запроса',
+                                             'Почтовый индекс отсутствует')
                 self.getImage()
             else:
                 QMessageBox.critical(self, 'Ошибка запроса',

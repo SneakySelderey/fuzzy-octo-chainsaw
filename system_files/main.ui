@@ -80,18 +80,25 @@
      <string/>
     </property>
    </widget>
-   <widget class="QWidget" name="horizontalLayoutWidget_2">
+   <widget class="QWidget" name="gridLayoutWidget">
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>450</y>
+      <y>410</y>
       <width>651</width>
-      <height>64</height>
+      <height>71</height>
      </rect>
     </property>
-    <layout class="QHBoxLayout" name="address_layout">
-     <item>
+    <layout class="QGridLayout" name="show_address_layout">
+     <item row="1" column="0">
       <widget class="QPlainTextEdit" name="address_line"/>
+     </item>
+     <item row="0" column="0">
+      <widget class="QCheckBox" name="show_post_index">
+       <property name="text">
+        <string>Показывать почтовый индекс</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </widget>
