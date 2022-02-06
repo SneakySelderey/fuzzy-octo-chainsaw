@@ -24,3 +24,9 @@ def get_full_address(address):
     obj = get_geocode_object(address)
     if obj is not None:
         return obj['metaDataProperty']['GeocoderMetaData']['Address']['formatted']
+
+
+def get_post_index(address):
+    obj = get_geocode_object(address)
+    if obj is not None:
+        return obj['metaDataProperty']['GeocoderMetaData']['Address']['postal_code']
