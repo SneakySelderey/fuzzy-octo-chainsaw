@@ -29,6 +29,7 @@ class Map(QMainWindow):
         self.l_map.setChecked(True)
         self.address.editingFinished.connect(self.getAddress)
         self.delete_req.clicked.connect(self.deletePt)
+        self.delete_req.clicked.connect(self.clear_address_line)
         self.find_btn.clicked.connect(self.getAddress)
         self.map_type = 'map'
         self.prev_coords = [self.ll[0], self.ll[1]]
@@ -38,10 +39,14 @@ class Map(QMainWindow):
         self.dif_x = self.dif_y = 0
         self.pt = None
         self.getImage()
+        self.address_line.setReadOnly(True)
 
     def deletePt(self):
         self.pt = None
         self.getImage()
+
+    def clear_address_line(self):
+        self.address_line.setPlainText('')
 
     def setDefault(self):
         """Функция, устанавливающая некоторые значения по умолчанию"""
@@ -58,6 +63,7 @@ class Map(QMainWindow):
                 self.setDefault()
                 self.ll = get_address_pos(self.address.text())
                 self.pt = [self.ll[0], self.ll[1]]
+                self.address_line.setPlainText(get_full_address(self.address.text()))
                 self.getImage()
             else:
                 QMessageBox.critical(self, 'Ошибка запроса',
