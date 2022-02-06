@@ -41,6 +41,7 @@ class Map(QMainWindow):
         self.pt = None
         self.getImage()
         self.address_line.setReadOnly(True)
+        self.LMB_hold_and_mouse_move = False
 
     def deletePt(self):
         self.pt = None
@@ -90,46 +91,49 @@ class Map(QMainWindow):
             self.moving = True
             self.dif_x = self.x - event.x()
             self.dif_y = self.y - event.y()
-
-            one_pix_to_degree_x = self.spn / self.width()
-            one_pix_to_degree_y = self.spn / self.height()
-
-            fake_ll = self.ll[0] - (self.dif_x * one_pix_to_degree_x) * 3.5, self.ll[1] + (self.dif_y *
-                                                                                           one_pix_to_degree_y) * 1.2
-            self.pt = [fake_ll[0], fake_ll[1]]
-
-            self.setDefault()
-            self.address_line.setPlainText(get_full_address(f"{self.pt[0]},{self.pt[1]}"))
-            if self.show_post_index.isChecked():
-                try:
-                    self.address_line.setPlainText(f"{self.address_line.toPlainText()},"
-                                                   f"{get_post_index(str(self.pt[0]) + ', ' + str(self.pt[1]))}")
-                except KeyError:
-                    QMessageBox.critical(self, 'Ошибка запроса',
-                                               'Почтовый индекс отсутствует')
-            self.getImage()
-        else:
-            QMessageBox.critical(self, 'Ошибка запроса',
-                                 'Адрес введен неверно')
+            self.LMB_hold_and_mouse_move = True
 
     def index_show(self):
         if self.show_post_index.isChecked():
-            try:
-                self.address_line.setPlainText(f"{self.address_line.toPlainText()},"
-                                               f"{get_post_index(str(self.pt[0]) + ',' + str(self.pt[1]))}")
-            except KeyError:
-                QMessageBox.critical(self, 'Ошибка запроса',
-                                     'Почтовый индекс отсутствует')
+            if self.pt:
+                try:
+                    self.address_line.setPlainText(f"{self.address_line.toPlainText()}, "
+                                                   f"{get_post_index(str(self.pt[0]) + ',' + str(self.pt[1]))}")
+                except KeyError:
+                    QMessageBox.critical(self, 'Ошибка запроса',
+                                         'Почтовый индекс отсутствует')
         else:
             if self.address.text():
                 self.address_line.setPlainText(get_full_address(self.address.text()))
             else:
                 self.address_line.setPlainText(get_full_address(f"{self.pt[0]}, {self.pt[1]}"))
 
-
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.setDefault()
+
+            self.dif_x = self.x - event.x()
+            self.dif_y = self.y - event.y()
+
+            if self.LMB_hold_and_mouse_move:
+                one_pix_to_degree_x = self.spn / self.width()
+                one_pix_to_degree_y = self.spn / self.height()
+
+                fake_ll = self.ll[0] - (self.dif_x * one_pix_to_degree_x) * 3.5, self.ll[1] + \
+                          (self.dif_y * one_pix_to_degree_y) * 1.2
+                self.pt = [fake_ll[0], fake_ll[1]]
+
+                self.setDefault()
+                self.address_line.setPlainText(get_full_address(f"{self.pt[0]},{self.pt[1]}"))
+                if self.show_post_index.isChecked():
+                    try:
+                        self.address_line.setPlainText(f"{self.address_line.toPlainText()}"
+                                                       f", {get_post_index(str(self.pt[0]) + ',' + str(self.pt[1]))}")
+                    except KeyError:
+                        QMessageBox.critical(self, 'Ошибка запроса',
+                                             'Почтовый индекс отсутствует')
+                self.getImage()
+            self.LMB_hold_and_mouse_move = False
 
     def mouseMoveEvent(self, event):
         """Обработка перемещения карыт с зажатой кнопкой мыши"""
@@ -141,6 +145,7 @@ class Map(QMainWindow):
             self.ll[0] -= (self.x - self.width() // 2) * self.spn / 1150
             self.ll[1] += (self.y - self.height() // 2) * self.spn / 1150
             self.getImage()
+            self.LMB_hold_and_mouse_move = False
 
     def changeMap(self):
         """Изменение типа карты"""
