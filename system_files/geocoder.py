@@ -18,3 +18,9 @@ def get_address_pos(address):
     obj = get_geocode_object(address)
     if obj is not None:
         return list(map(float, obj['Point']['pos'].split()))
+
+
+def get_full_address(address):
+    obj = get_geocode_object(address)
+    if obj is not None:
+        return obj['metaDataProperty']['GeocoderMetaData']['Address']['formatted']
