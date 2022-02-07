@@ -36,7 +36,7 @@ class Map(QMainWindow):
         self.z = 17
         self.prev_coords = [self.ll[0], self.ll[1]]
         self.x = self.width() // 2
-        self.y = self.height() // 2
+        self.y = self.picture.y() + self.picture.height() // 2
         self.dif_x = self.dif_y = 0
 
         self.map_type = 'map'
@@ -156,19 +156,13 @@ class Map(QMainWindow):
                 self.new_req = True
                 self.click = True
 
-                print(event.x(), event.y())
+                one_pix_to_degree_x = self.spn / self.map_size[0]
+                one_pix_to_degree_y = self.spn / self.map_size[1]
 
-                v1 = (event.x() - self.picture.x()) * 2 ** (self.z - 1)
-                v2 = (event.y()) * 2 ** (self.z - 1)
-
-
-
-                print(tile2latlon(328 * 2 ** (self.z - 1), 242 * 2 ** (self.z - 1), self.z))
-                x2, y2 = xy2LatLon(*self.ll, self.z, *self.map_size, event.y(), event.x())
-                print(x2, y2)
-
-                self.pt = [x2, y2]
-
+                fake_ll = self.ll[0] - (
+                        self.dif_x * one_pix_to_degree_x) * 3.49, self.ll[1] + \
+                          (self.dif_y * one_pix_to_degree_y) * 1.43
+                self.pt = [fake_ll[0], fake_ll[1]]
 
                 self.setDefault()
                 self.addressShow()
