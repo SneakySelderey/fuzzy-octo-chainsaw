@@ -9,7 +9,12 @@ from system_files.geocoder import *
 from settings import *
 
 
+USEFUL_KEYS = [Qt.Key_Down, Qt.Key_Up, Qt.Key_Left, Qt.Key_Right, Qt.Key_W,
+               Qt.Key_S, Qt.Key_A, Qt.Key_D, Qt.Key_PageDown, Qt.Key_PageUp]
+
+
 def except_hook(cls, exception, traceback):
+    """Вывод ошибок"""
     sys.__excepthook__(cls, exception, traceback)
 
 
@@ -17,37 +22,54 @@ class Map(QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi('system_files/main.ui', self)
-        self.setWindowTitle('Отображение карты')
         self.setFixedSize(self.size())
         self.setWindowIcon(QIcon('system_files/icon.png'))
-        self.map_file = None
+
+        QMessageBox.information(self, 'Важно',
+                                'Вы можете управлять картой с помощью зажатия '
+                                'левой кнопки мыши и ее перемещения. '
+                                'Масштаб карты изменяется колесиком мыши')
+
         self.map_size = 650, 450
-        self.spn = 0.001
+        self.spn = 0.002
         self.ll = [9.794475, 50.972254]
-        self.radio = [self.l_map, self.sat_map, self.hybrid_map]
-        [i.clicked.connect(self.changeMap) for i in self.radio]
-        self.l_map.setChecked(True)
-        self.address.editingFinished.connect(self.getAddress)
-        self.delete_req.clicked.connect(self.deletePt)
-        self.delete_req.clicked.connect(self.clear_address_line)
-        self.find_btn.clicked.connect(self.getAddress)
-        self.show_post_index.stateChanged.connect(self.index_show)
-        self.map_type = 'map'
+        self.z = 17
         self.prev_coords = [self.ll[0], self.ll[1]]
-        self.moving = False
         self.x = self.width() // 2
         self.y = self.height() // 2
         self.dif_x = self.dif_y = 0
+
+        self.map_type = 'map'
+        self.moving = False
         self.pt = None
-        self.getImage()
-        self.address_line.setReadOnly(True)
+        self.map_file = None
+        self.new_req = True
         self.LMB_hold_and_mouse_move = False
+        self.click = False
+
+        self.radio = [self.l_map, self.sat_map, self.hybrid_map]
+        [i.clicked.connect(self.changeMap) for i in self.radio]
+        self.l_map.setChecked(True)
+        self.delete_req.clicked.connect(self.deletePt)
+        self.delete_req.clicked.connect(self.clear_address_line)
+        self.find_btn.clicked.connect(self.getAddress)
+        self.show_post_index.stateChanged.connect(self.addressShow)
+        self.address_line.setReadOnly(True)
+        self.statusbar.messageChanged.connect(self.changeStatusColor)
+
+        self.getImage()
+
+    def getPt(self):
+        return f'{self.pt[0]},{self.pt[1]}'
 
     def deletePt(self):
+        """Удаление метки"""
         self.pt = None
+        self.new_req = False
         self.getImage()
 
     def clear_address_line(self):
+        """Удаление адреса"""
         self.address_line.setPlainText('')
 
     def setDefault(self):
@@ -63,16 +85,20 @@ class Map(QMainWindow):
             value = get_address_pos(self.address.text())
             if value is not None:
                 self.setDefault()
+                self.new_req = True
                 self.ll = get_address_pos(self.address.text())
                 self.pt = [self.ll[0], self.ll[1]]
-                self.address_line.setPlainText(get_full_address(self.address.text()))
-                if self.show_post_index.isChecked():
-                    try:
-                        self.address_line.appendPlainText(f"{self.address_line.toPlainText()}, "
-                                                          f"{get_post_index(self.address.text())}")
-                    except KeyError:
-                        QMessageBox.critical(self, 'Ошибка запроса',
-                                             'Почтовый индекс отсутствует')
+                try:
+                    result = get_full_address(
+                        f'{self.pt[0]},{self.pt[1]}',
+                        postal_code=self.show_post_index.isChecked())
+                    self.address_line.setPlainText(result)
+                except KeyError:
+                    self.statusbar.showMessage(
+                        'Ошибка запроса. Почтовый индекс отсутствует', 2000)
+                    self.address_line.setPlainText(get_full_address(
+                        self.address.text()))
+
                 self.getImage()
             else:
                 QMessageBox.critical(self, 'Ошибка запроса',
@@ -81,57 +107,71 @@ class Map(QMainWindow):
     def wheelEvent(self, event):
         """Масштабирование"""
         if event.angleDelta().y() > 0:
+            self.z = min(19, self.z + 1)
             self.spn = max(self.spn / 2, 0.001)
         else:
+            self.z = max(self.z - 1, 1)
             self.spn = min(self.spn * 2, 32.768)
         self.getImage()
 
     def mousePressEvent(self, event):
+        """Обработка нажатия кнопки мыши"""
         if event.button() == Qt.LeftButton:
             self.moving = True
             self.dif_x = self.x - event.x()
             self.dif_y = self.y - event.y()
             self.LMB_hold_and_mouse_move = True
 
-    def index_show(self):
-        if self.show_post_index.isChecked():
-            if self.pt:
+    def addressShow(self):
+        """Функция для вывода адреса и почтового индекса"""
+        if self.show_post_index.isChecked() and self.new_req:
+            if self.pt is not None:
                 try:
-                    self.address_line.setPlainText(f"{self.address_line.toPlainText()}, "
-                                                   f"{get_post_index(str(self.pt[0]) + ',' + str(self.pt[1]))}")
+                    result = get_full_address(
+                        self.address.text() if
+                        self.address.text() and not self.click else
+                        self.getPt(), postal_code=True)
+                    self.address_line.setPlainText(result)
                 except KeyError:
-                    QMessageBox.critical(self, 'Ошибка запроса',
-                                         'Почтовый индекс отсутствует')
-        else:
-            if self.address.text():
-                self.address_line.setPlainText(get_full_address(self.address.text()))
-            else:
-                self.address_line.setPlainText(get_full_address(f"{self.pt[0]}, {self.pt[1]}"))
+                    self.statusbar.showMessage(
+                        'Ошибка запроса. Почтовый индекс отсутствует', 2000)
+                finally:
+                    self.click = False
+        elif self.new_req:
+            if self.address.text() or self.pt is not None:
+                self.address_line.setPlainText(get_full_address(
+                    self.address.text() if self.address.text() else
+                    self.getPt()))
 
     def mouseReleaseEvent(self, event):
+        """Обработка отпускания кнопки мыши"""
         if event.button() == Qt.LeftButton:
             self.setDefault()
 
             self.dif_x = self.x - event.x()
             self.dif_y = self.y - event.y()
 
-            if self.LMB_hold_and_mouse_move:
-                one_pix_to_degree_x = self.spn / self.width()
-                one_pix_to_degree_y = self.spn / self.height()
+            if self.LMB_hold_and_mouse_move and self.picture.y() <= event.y() \
+                    <= self.picture.y() + self.picture.height():
+                self.new_req = True
+                self.click = True
 
-                fake_ll = self.ll[0] - (self.dif_x * one_pix_to_degree_x) * 3.5, self.ll[1] + \
-                          (self.dif_y * one_pix_to_degree_y) * 1.2
-                self.pt = [fake_ll[0], fake_ll[1]]
+                print(event.x(), event.y())
+
+                v1 = (event.x() - self.picture.x()) * 2 ** (self.z - 1)
+                v2 = (event.y()) * 2 ** (self.z - 1)
+
+
+
+                print(tile2latlon(328 * 2 ** (self.z - 1), 242 * 2 ** (self.z - 1), self.z))
+                x2, y2 = xy2LatLon(*self.ll, self.z, *self.map_size, event.y(), event.x())
+                print(x2, y2)
+
+                self.pt = [x2, y2]
+
 
                 self.setDefault()
-                self.address_line.setPlainText(get_full_address(f"{self.pt[0]},{self.pt[1]}"))
-                if self.show_post_index.isChecked():
-                    try:
-                        self.address_line.setPlainText(f"{self.address_line.toPlainText()}"
-                                                       f", {get_post_index(str(self.pt[0]) + ',' + str(self.pt[1]))}")
-                    except KeyError:
-                        QMessageBox.critical(self, 'Ошибка запроса',
-                                             'Почтовый индекс отсутствует')
+                self.addressShow()
                 self.getImage()
             self.LMB_hold_and_mouse_move = False
 
@@ -159,7 +199,8 @@ class Map(QMainWindow):
         """Функция получения изображения по параметрам"""
         parameters = {'ll': ','.join(map(str, self.ll)), 'l': self.map_type,
                       'size': ','.join(map(str, self.map_size)),
-                      'spn': f'{self.spn},{self.spn}'}
+                      # 'spn': f'{self.spn},{self.spn}'
+        'z': self.z}
         if self.pt is not None:
             parameters['pt'] = ','.join(map(str, self.pt)) + ',ya_ru'
         response = requests.get(static_api_server, params=parameters)
@@ -170,17 +211,15 @@ class Map(QMainWindow):
                 if not self.moving:
                     self.ll[0] += self.spn * 3.49
                 parameters['ll'] = ','.join(map(str, self.ll))
-                response = requests.get(static_api_server, params=parameters)
             elif self.ll[0] < -179.9999:
                 self.ll[0] = 179.9999
                 if not self.moving:
                     self.ll[0] -= self.spn * 3.49
                 parameters['ll'] = ','.join(map(str, self.ll))
-                response = requests.get(static_api_server, params=parameters)
             else:
                 self.ll = [self.prev_coords[0], self.prev_coords[1]]
                 parameters['ll'] = ','.join(map(str, self.ll))
-                response = requests.get(static_api_server, params=parameters)
+            response = requests.get(static_api_server, params=parameters)
 
         self.map_file = "map.png"
         with open(self.map_file, "wb") as file:
@@ -191,6 +230,14 @@ class Map(QMainWindow):
     def closeEvent(self, event):
         """При закрытии формы удаляем файл с изображением"""
         os.remove(self.map_file)
+
+    def changeStatusColor(self):
+        """Функция для изменения цвета status bar'а в случае ошибки"""
+        if self.statusbar.currentMessage():
+            self.statusbar.setStyleSheet(
+                "QStatusBar{background:rgba(255,0,0,255);}")
+        else:
+            self.statusbar.setStyleSheet('')
 
     def keyPressEvent(self, event):
         """Обрабокта нажатий клавиш клавиатуры"""
@@ -207,7 +254,7 @@ class Map(QMainWindow):
             self.ll[0] -= self.spn * 3.49
         if event.key() == Qt.Key_D or event.key() == Qt.Key_Right:
             self.ll[0] += self.spn * 3.49
-        self.getImage()
+        self.getImage() if event.key() in USEFUL_KEYS else None
 
 
 if __name__ == '__main__':
