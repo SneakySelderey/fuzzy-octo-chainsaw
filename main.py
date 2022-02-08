@@ -86,6 +86,7 @@ class Map(QMainWindow):
             if value is not None:
                 self.setDefault()
                 self.new_req = True
+                self.click = False
                 self.ll = get_address_pos(self.address.text())
                 self.pt = [self.ll[0], self.ll[1]]
                 try:
@@ -135,13 +136,11 @@ class Map(QMainWindow):
                 except KeyError:
                     self.statusbar.showMessage(
                         'Ошибка запроса. Почтовый индекс отсутствует', 2000)
-                finally:
-                    self.click = False
         elif self.new_req:
             if self.address.text() or self.pt is not None:
                 self.address_line.setPlainText(get_full_address(
-                    self.address.text() if self.address.text() else
-                    self.getPt()))
+                    self.address.text() if self.address.text() and not
+                    self.click else self.getPt()))
 
     def mouseReleaseEvent(self, event):
         """Обработка отпускания кнопки мыши"""
