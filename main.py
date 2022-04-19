@@ -144,6 +144,12 @@ class Map(QMainWindow):
 
     def mouseReleaseEvent(self, event):
         """Обработка отпускания кнопки мыши"""
+        x0 = lonToX(self.ll[0]) * get_coeff(self.z) + (
+                event.x() - self.width() // 2) * 2
+        y0 = latToY(self.ll[1]) * get_coeff(self.z) + (
+                self.height() // 2 - event.y()) * 2
+        lon = xToLon(x0 / get_coeff(self.z))
+        lat = yToLat(y0 / get_coeff(self.z))
         if event.button() == Qt.LeftButton:
             self.setDefault()
 
@@ -151,43 +157,26 @@ class Map(QMainWindow):
                     <= self.picture.y() + self.picture.height():
                 self.new_req = True
                 self.click = True
-
-                x0 = lonToX(self.ll[0]) * get_coeff(self.z) + (event.x() - self.width() // 2) * 2
-                y0 = latToY(self.ll[1]) * get_coeff(self.z) + (self.height() // 2 - event.y()) * 2
-                lon = xToLon(x0 / get_coeff(self.z))
-                lat = yToLat(y0 / get_coeff(self.z))
-
-                # self.ll = [lon, lat]
-
-                # dif_x = self.x - event.x()
-                # dif_y = self.y - event.y()
-                #
-                # one_pix_to_degree_x = self.spn / self.map_size[0]
-                # one_pix_to_degree_y = self.spn / self.map_size[1]
-                #
-                # fake_ll = self.ll[0] - (
-                #         dif_x * one_pix_to_degree_x) * 3.49, self.ll[1] + \
-                #           (dif_y * one_pix_to_degree_y) * 1.43
                 self.pt = [lon, lat]
-                #
                 self.addressShow()
                 self.getImage()
             self.LMB_hold_and_mouse_move = False
-        # elif event.button() == Qt.RightButton:
-        #     dif_x = self.x - event.x()
-        #     dif_y = self.y - event.y()
-        #
-        #     one_pix_to_degree_x = self.spn / self.map_size[0]
-        #     one_pix_to_degree_y = self.spn / self.map_size[1]
-        #
-        #     fake_ll = self.ll[0] - (
-        #         dif_x * one_pix_to_degree_x) * 3.49, self.ll[1] + \
-        #               (dif_y * one_pix_to_degree_y) * 1.43
-        #     self.pt = [fake_ll[0], fake_ll[1]]
-        #     print(get_full_address(','.join(map(
-        #         str, self.pt))))
-        #     print(get_organization(get_full_address(','.join(map(
-        #         str, self.pt)))))
+        elif event.button() == Qt.RightButton:
+            self.pt = [lon, lat]
+            self.getImage()
+            org = get_organization(self.pt)
+            if org is not None:
+                value = f'"{org[0]}" ({org[1]}'
+                if self.show_post_index.isChecked():
+                    postal_code = get_full_address(org[1], only_postal=True)
+                    if postal_code is not None:
+                        value += f' {postal_code})'
+                    else:
+                        value += ')'
+                else:
+                    value += ')'
+                self.address.setText(org[1])
+                self.address_line.setPlainText(value)
 
     def mouseMoveEvent(self, event):
         """Обработка перемещения карыт с зажатой кнопкой мыши"""

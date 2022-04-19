@@ -52,12 +52,17 @@ def get_distance(p1, p2):
 
 def get_organization(pos):
     """Функция, возвращающая ближайшую организауцию к точке на карте"""
-    parameters = {"apikey": apikey_org, "text": ','.join(map(str, pos[::-1])),
-                  "lang": "ru_RU", "type": "biz"}
+    parameters = {"apikey": apikey_org, "text": get_full_address(','.join(map(str, pos))),
+                  "lang": "ru_RU", "type": "biz", 'll': ','.join(map(str, pos))}
 
     response = get(search_api_server, params=parameters)
     if response:
-        return response.json()['features']
+        organization = response.json()["features"][0]
+        org_address = organization["properties"]["CompanyMetaData"]["address"]
+        org_name = organization["properties"]["CompanyMetaData"]["name"]
+        point = organization["geometry"]["coordinates"]
+        if get_distance(point, pos) <= 50:
+            return org_name, org_address, point
 
 
 def get_geocode_object(address):
@@ -78,7 +83,7 @@ def get_address_pos(address):
         return list(map(float, obj['Point']['pos'].split()))
 
 
-def get_full_address(address, postal_code=False):
+def get_full_address(address, postal_code=False, only_postal=False):
     """Получение полного адрсеа объекта"""
     obj = get_geocode_object(address)
     if obj is not None:
@@ -87,4 +92,9 @@ def get_full_address(address, postal_code=False):
         to_return = address_details['formatted']
         if postal_code:
             to_return += ' , ' + address_details['postal_code']
-        return to_return
+        if not only_postal:
+            return to_return
+        try:
+            return address_details['postal_code']
+        except KeyError:
+            return None
