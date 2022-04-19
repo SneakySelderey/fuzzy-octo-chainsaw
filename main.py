@@ -147,26 +147,47 @@ class Map(QMainWindow):
         if event.button() == Qt.LeftButton:
             self.setDefault()
 
-            self.dif_x = self.x - event.x()
-            self.dif_y = self.y - event.y()
-
             if self.LMB_hold_and_mouse_move and self.picture.y() <= event.y() \
                     <= self.picture.y() + self.picture.height():
                 self.new_req = True
                 self.click = True
 
-                one_pix_to_degree_x = self.spn / self.map_size[0]
-                one_pix_to_degree_y = self.spn / self.map_size[1]
+                x0 = lonToX(self.ll[0]) * get_coeff(self.z) + (event.x() - self.width() // 2) * 2
+                y0 = latToY(self.ll[1]) * get_coeff(self.z) + (self.height() // 2 - event.y()) * 2
+                lon = xToLon(x0 / get_coeff(self.z))
+                lat = yToLat(y0 / get_coeff(self.z))
 
-                fake_ll = self.ll[0] - (
-                        self.dif_x * one_pix_to_degree_x) * 3.49, self.ll[1] + \
-                          (self.dif_y * one_pix_to_degree_y) * 1.43
-                self.pt = [fake_ll[0], fake_ll[1]]
+                # self.ll = [lon, lat]
 
-                self.setDefault()
+                # dif_x = self.x - event.x()
+                # dif_y = self.y - event.y()
+                #
+                # one_pix_to_degree_x = self.spn / self.map_size[0]
+                # one_pix_to_degree_y = self.spn / self.map_size[1]
+                #
+                # fake_ll = self.ll[0] - (
+                #         dif_x * one_pix_to_degree_x) * 3.49, self.ll[1] + \
+                #           (dif_y * one_pix_to_degree_y) * 1.43
+                self.pt = [lon, lat]
+                #
                 self.addressShow()
                 self.getImage()
             self.LMB_hold_and_mouse_move = False
+        # elif event.button() == Qt.RightButton:
+        #     dif_x = self.x - event.x()
+        #     dif_y = self.y - event.y()
+        #
+        #     one_pix_to_degree_x = self.spn / self.map_size[0]
+        #     one_pix_to_degree_y = self.spn / self.map_size[1]
+        #
+        #     fake_ll = self.ll[0] - (
+        #         dif_x * one_pix_to_degree_x) * 3.49, self.ll[1] + \
+        #               (dif_y * one_pix_to_degree_y) * 1.43
+        #     self.pt = [fake_ll[0], fake_ll[1]]
+        #     print(get_full_address(','.join(map(
+        #         str, self.pt))))
+        #     print(get_organization(get_full_address(','.join(map(
+        #         str, self.pt)))))
 
     def mouseMoveEvent(self, event):
         """Обработка перемещения карыт с зажатой кнопкой мыши"""
@@ -192,8 +213,7 @@ class Map(QMainWindow):
         """Функция получения изображения по параметрам"""
         parameters = {'ll': ','.join(map(str, self.ll)), 'l': self.map_type,
                       'size': ','.join(map(str, self.map_size)),
-                      # 'spn': f'{self.spn},{self.spn}'
-        'z': self.z}
+                      'z': self.z}
         if self.pt is not None:
             parameters['pt'] = ','.join(map(str, self.pt)) + ',ya_ru'
         response = requests.get(static_api_server, params=parameters)

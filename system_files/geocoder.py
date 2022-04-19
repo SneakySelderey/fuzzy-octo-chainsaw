@@ -1,85 +1,63 @@
-from math import pi, radians, tan, log, degrees, atan, e, asin, tanh, sin
-import utm
-from numpy import arctanh
+from math import pi, radians, tan, log, degrees, sin, sqrt, atan
+import math
 from requests import get
-from settings import apikey, geocode_server
+from settings import apikey, geocode_server, search_api_server, apikey_org, \
+    r_major, r_minor, temp
+import geopy.distance
 
 
-def tile2latlon(x, y, z):
-    L = 85.05112878
-    lon = ((x / 2.0**(z+7) )-1) * 180
-    lat = 180/pi * (asin(tanh(-pi/2**(z+7)*y + arctanh(sin(pi/180*L)))))
-    return [lat, lon]
+def lonToX(lon):
+    """Возвращает координату долготы"""
+    return r_major * radians(lon)
 
 
-def latlon2tile2(lat, lon, z):
-    L = 85.05112878
-    x = int((lon/180 + 1) * 2**(z+7))
-    y = int( (2**(z+7) / pi * ( -arctanh(sin(pi*lat/180)) + arctanh(sin(pi*L/180)) ) ))
-    return [x,y]
+def xToLon(x):
+    """Возвращает долготу координаты"""
+    return degrees(x / r_major)
 
 
-def LatLonToXY(lat_center, lon_center, zoom):
-    """Географические координаты в декартовы"""
-    c = (256 / (2 * pi)) * 2 ** zoom
-    x = c * (radians(lon_center) + pi)
-    y = c * (pi - log(tan((pi / 4) + radians(lat_center) / 2)))
-    return x, y
+def yToLat(y):
+    """Возвращает широту координаты"""
+    iz_lon = y / r_major
+    eccent = sqrt(1 - temp ** 2)
+    lon = 0
+    for e in range(100):
+        lon = -2 * atan((math.e ** -iz_lon) *
+                             (((1 - eccent * sin(lon)) / (
+                                     1 + eccent * sin(lon))) ** (
+                                  eccent / 2))) + pi / 2
+    return round(degrees(lon), 7)
 
 
-def xy2LatLon(lat_center, lon_center, zoom, pxX_internal, pxY_internal):
-    """Декартовы координты в географические"""
-
-    x_center, y_center, num, let = utm.from_latlon(lat_center, lon_center)
-    print(tile2latlon(x_center, y_center, 1))
-
-    px = int(x_center / 2 ** (zoom - 6.439))
-    py = int(y_center / 2 ** (zoom - 4.875))
-    print(px, py)
-    dx = (px - pxX_internal) * 2 ** (zoom - 8)
-    dy = (py - pxY_internal) * 2 ** (zoom - 8)
-
-    xPoint = x_center + dx
-    yPoint = y_center + dy
-
-    return utm.to_latlon(xPoint, yPoint, num, let)
+def latToY(lat):
+    """Возвращает коорднату широты"""
+    lat = max(-89.5, min(lat, 89.5))
+    e = sqrt(1 - temp ** 2)
+    phi = radians(lat)
+    sinphi = sin(phi)
+    con = ((1.0 - e * sinphi) / (1.0 + e * sinphi)) ** (e / 2)
+    v = log(tan((pi / 2 + phi) / 2) * con)
+    return r_major * v
 
 
-def xytoLatLon(lat_center, lon_center, zoom, width_internal, height_internal,
-              pxX_internal, pxY_internal):
-    """Декартовы координты в географические"""
+def get_coeff(z):
+    """Возвращает коэффициент масштабирования"""
+    return 2 ** (8 + z) / (r_major * pi)
 
-    z = utm.from_latlon(lat_center, lon_center)
 
-    x_center, y_center = LatLonToXY(lat_center, lon_center, zoom)
-    print(x_center, y_center)
-    print(z)
+def get_distance(p1, p2):
+    """Возвращает расстояние между двумя точками"""
+    return geopy.distance.distance(p1, p2).m
 
-    ww = utm.to_latlon(z[0], z[1], 39, 'P')
-    print(ww)
-    print(utm.to_latlon(z[0], z[1], 40, 'P'))
-    print()
 
-    print(x_center / 2 ** (zoom - 1), y_center / 2 ** (zoom - 1))
+def get_organization(pos):
+    """Функция, возвращающая ближайшую организауцию к точке на карте"""
+    parameters = {"apikey": apikey_org, "text": ','.join(map(str, pos[::-1])),
+                  "lang": "ru_RU", "type": "biz"}
 
-    xPoint = x_center - (width_internal / 2 - pxX_internal)
-    yPoint = y_center - (height_internal / 2 - pxY_internal)
-    print(int(x_center / 2 ** (zoom - 1)) - pxY_internal, int(y_center / 2 ** (zoom - 1)) - pxX_internal)
-    xPoint = x_center + (int(x_center / 2 ** (zoom - 1)) - pxY_internal) * 2 ** (zoom - 20)
-    yPoint = y_center + (int(y_center / 2 ** (zoom - 1)) - pxY_internal) * 2 ** (zoom - 20)
-
-    print(x_center, xPoint)
-    print(y_center, yPoint)
-    print()
-
-    c = (256 / (2 * pi)) * 2 ** zoom
-    m = (xPoint / c) - pi
-    n = -(yPoint / c) + pi
-
-    lon_point = degrees(m)
-    lat_point = degrees((atan(e ** n) - (pi / 4)) * 2)
-
-    return lat_point, lon_point
+    response = get(search_api_server, params=parameters)
+    if response:
+        return response.json()['features']
 
 
 def get_geocode_object(address):
